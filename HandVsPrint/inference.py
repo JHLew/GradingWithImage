@@ -1,6 +1,7 @@
 import argparse
 import torch
 import os
+import shutil
 from glob import glob
 from PIL import Image
 from torchvision.transforms.functional import to_pil_image, to_tensor
@@ -18,7 +19,7 @@ def recursive_breakdown(network, img, img_name, args):
     left_img = left
     right_img = right
 
-    left, right = to_tensor(left), to_tensor(right)
+    left, right = to_tensor(left).unsqueeze(0), to_tensor(right).unsqueeze(0)
 
     preds = []
     with torch.no_grad():
@@ -27,17 +28,28 @@ def recursive_breakdown(network, img, img_name, args):
 
         _, left_pred = left_logit.topk(1, 1, True, True)
         _, right_pred = right_logit.topk(1, 1, True, True)
-        preds.append((left_img, left_pred.item(), img_name + '_L'))
-        preds.append((right_img, right_pred.item(), img_name + '_R'))
+        preds.append((left_img, left_pred.item(), img_name[:-4] + '_L.png'))
+        preds.append((right_img, right_pred.item(), img_name[:-4] + '_R.png'))
 
     for pred_tuple in preds:
         cur_img, pred, name = pred_tuple
+        if cur_img.size[0] < 70:
+            pred = 0
         if pred == 0:
             cur_img.save(os.path.join(args.out_hand, name))
         elif pred == 1:
             cur_img.save(os.path.join(args.out_print), name)
         else:
             recursive_breakdown(network, cur_img, name, args)
+
+
+def fit_size(img):
+    w, h = img.size
+    target_h = 32
+    scale = h / target_h
+    new_w = int(w / scale)
+    img = img.resize((new_w, target_h), resample=Image.BICUBIC)
+    return img
 
 
 if __name__ == '__main__':
@@ -51,6 +63,10 @@ if __name__ == '__main__':
 
     img_list = glob(os.path.join(args.detected_path, '*'))
 
+    if os.path.exists(args.out_print):
+        shutil.rmtree(args.out_print)
+    if os.path.exists(args.out_hand):
+        shutil.rmtree(args.out_hand)
     os.makedirs(args.out_print)
     os.makedirs(args.out_hand)
 
@@ -58,7 +74,7 @@ if __name__ == '__main__':
         img_name = os.path.basename(img)
         img = Image.open(img).convert('L')
         orig_img = img
-        img = to_tensor(img)
+        img = to_tensor(fit_size(img)).unsqueeze(0)
 
         with torch.no_grad():
             logit = network(img.to(device))
