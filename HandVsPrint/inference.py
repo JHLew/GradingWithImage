@@ -34,7 +34,7 @@ def recursive_breakdown(network, img, img_name, args):
     for pred_tuple in preds:
         cur_img, pred, name = pred_tuple
         if cur_img.size[0] < 70:
-            pred = 0
+            pred = 1
         if pred == 0:
             cur_img.save(os.path.join(args.out_hand, name))
         elif pred == 1:
