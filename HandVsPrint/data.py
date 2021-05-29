@@ -146,6 +146,9 @@ class Data(Dataset):
             if not noise_level == 0:
                 noise = torch.randn_like(img) * noise_level
                 img = img + noise
+        else:
+            img = to_tensor(img)
+            label = torch.LongTensor([label])
 
         img = torch.clamp(img, 0, 1)
 
@@ -155,7 +158,7 @@ class Data(Dataset):
 train_dataset = Data('./dataset/*')
 dataloader = DataLoader(train_dataset, batch_size=64, shuffle=True, num_workers=12)
 
-test_dataset = Data('./dataset/*')
+test_dataset = Data('./dataset/*', is_train=False)
 test_dataset.hand_list = train_dataset.val_hand
 test_dataset.print_list = train_dataset.val_print
 test_dataset.n_hand = len(test_dataset.hand_list)

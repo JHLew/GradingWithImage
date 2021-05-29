@@ -13,9 +13,8 @@ save_path = './shufflenetv2_05.pth'
 # save_path = './mnasnet_10.pth'
 # save_path = './resnet18.pth'
 
-network = shufflenet_v2_x0_5(num_classes=3)
+network = shufflenet_v2_x0_5(num_classes=3)  # 99.5%
 network.conv1[0] = nn.Conv2d(1, 24, 3, 2, 1, bias=False)
-
 # network = mnasnet0_5(num_classes=3)  # Acc. 76 %
 # network.layers[0] = nn.Conv2d(1, 16, 3, padding=1, stride=2, bias=False)  # 05
 # network = mnasnet1_0(num_classes=3)  # Acc. 81.5%
@@ -53,18 +52,27 @@ def train(dataloader):
             if i % 250 == 0:
                 print(i, loss.item())
                 torch.save(network.state_dict(), save_path)
-    # print(loss.item())
     torch.save(network.state_dict(), save_path)
 
 
 def validate(dataloader):
+    print(network.conv1[0].weight)
     network.eval().cuda()
     n_correct = 0
     total_n = 0
     for i, data in enumerate(dataloader):
         img, label = data
+        # save samples
+        # print(label)
+        # n = img.shape[0]
+        # for i in range(n):
+        #     ex = img[i]
+        #     ex_label = label[i]
+        #     ex = to_pil_image(ex)
+        #     ex.save('./validation/{}_{}.png'.format(i + total_n, ex_label.item()))
         with torch.no_grad():
             logit = network(img.cuda())
+            print(logit)
             b = logit.shape[0]
             _, pred = logit.topk(1, 1, True, True)
             pred = pred.t()
